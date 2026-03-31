@@ -4,11 +4,13 @@ namespace App\Livewire;
 
 use App\Models\HubSetting;
 use App\Models\Shortcut;
+use App\Models\User;
 use App\Services\FaviconFetcher;
 use Database\Seeders\ShortcutSeeder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -79,8 +81,24 @@ class ShortcutAdminPanel extends Component
 
     public string $deleteShortcutTitle = '';
 
+    public string $managedUserName = '';
+
+    public string $managedUserEmail = '';
+
+    public string $managedUserPassword = '';
+
+    public string $managedUserRole = User::ROLE_MANAGER;
+
+    public ?int $editingManagedUserId = null;
+
+    public ?int $deleteManagedUserId = null;
+
+    public string $deleteManagedUserName = '';
+
     public function mount(): void
     {
+        abort_unless(auth()->user()?->canAccessAdmin(), 403);
+
         $this->fillDashboardSettings();
     }
 
@@ -129,6 +147,27 @@ class ShortcutAdminPanel extends Component
             'dashboardLogoPositionX' => ['required', 'integer', 'min:0', 'max:100'],
             'dashboardLogoPositionY' => ['required', 'integer', 'min:0', 'max:100'],
         ];
+    }
+
+    public function managedUserRules(): array
+    {
+        $rules = [
+            'managedUserName' => ['required', 'string', 'max:255'],
+            'managedUserEmail' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editingManagedUserId)],
+            'managedUserRole' => ['required', Rule::in([User::ROLE_ADMIN, User::ROLE_MANAGER])],
+        ];
+
+        if ($this->editingManagedUserId) {
+            if (filled($this->managedUserPassword)) {
+                $rules['managedUserPassword'] = ['string', 'min:8', 'max:255'];
+            }
+
+            return $rules;
+        }
+
+        $rules['managedUserPassword'] = ['required', 'string', 'min:8', 'max:255'];
+
+        return $rules;
     }
 
     public function updatedDashboardFaviconUrl(): void
@@ -256,6 +295,141 @@ class ShortcutAdminPanel extends Component
             'hidden' => Shortcut::query()->where('is_active', false)->count(),
             'categories' => Shortcut::query()->distinct('category')->count('category'),
         ];
+    }
+
+    #[Computed]
+    public function manageableUsers()
+    {
+        return $this->manageableUsersQuery()
+            ->orderByRaw("case when role = 'admin' then 0 when role = 'manager' then 1 else 2 end")
+            ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
+    public function canManageUsers(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public function saveManagedUser(): void
+    {
+        abort_unless($this->canManageUsers, 403);
+
+        $validated = $this->validate($this->managedUserRules());
+
+        $managedUser = $this->editingManagedUserId
+            ? $this->findManageableUser($this->editingManagedUserId)
+            : null;
+
+        if ($managedUser && $managedUser->is(auth()->user()) && $validated['managedUserRole'] !== User::ROLE_ADMIN) {
+            $this->addError('managedUserRole', 'Akun admin yang sedang dipakai harus tetap berperan sebagai admin.');
+
+            return;
+        }
+
+        if ($managedUser && $managedUser->isAdmin() && $validated['managedUserRole'] !== User::ROLE_ADMIN && $this->adminUserCount() <= 1) {
+            $this->addError('managedUserRole', 'Setidaknya harus ada satu admin aktif di sistem.');
+
+            return;
+        }
+
+        $payload = [
+            'name' => trim($validated['managedUserName']),
+            'email' => trim($validated['managedUserEmail']),
+            'role' => $validated['managedUserRole'],
+        ];
+
+        if (filled($this->managedUserPassword)) {
+            $payload['password'] = $validated['managedUserPassword'];
+        }
+
+        if ($managedUser) {
+            $managedUser->update($payload);
+        } else {
+            User::query()->create([
+                ...$payload,
+                'email_verified_at' => now(),
+                'password' => $validated['managedUserPassword'],
+            ]);
+        }
+
+        unset($this->manageableUsers);
+
+        $this->resetManagedUserForm();
+
+        $this->dispatch(
+            'shortcut-toast',
+            message: $managedUser ? 'Akun pengelola berhasil diperbarui.' : 'Akun pengelola berhasil dibuat.',
+            type: 'success',
+        );
+    }
+
+    public function editManagedUser(int $managedUserId): void
+    {
+        abort_unless($this->canManageUsers, 403);
+
+        $managedUser = $this->findManageableUser($managedUserId);
+
+        $this->editingManagedUserId = $managedUser->id;
+        $this->managedUserName = $managedUser->name;
+        $this->managedUserEmail = $managedUser->email;
+        $this->managedUserPassword = '';
+        $this->managedUserRole = $managedUser->role;
+        $this->cancelManagedUserDelete();
+        $this->resetValidation(['managedUserName', 'managedUserEmail', 'managedUserPassword', 'managedUserRole']);
+
+        $this->dispatch('shortcut-toast', message: 'Akun siap diedit.', type: 'info');
+    }
+
+    public function confirmManagedUserDelete(int $managedUserId): void
+    {
+        abort_unless($this->canManageUsers, 403);
+
+        $managedUser = $this->findManageableUser($managedUserId);
+
+        $this->deleteManagedUserId = $managedUser->id;
+        $this->deleteManagedUserName = $managedUser->name;
+    }
+
+    public function cancelManagedUserDelete(): void
+    {
+        $this->reset(['deleteManagedUserId', 'deleteManagedUserName']);
+    }
+
+    public function deleteManagedUser(): void
+    {
+        abort_unless($this->canManageUsers, 403);
+
+        if (! $this->deleteManagedUserId) {
+            return;
+        }
+
+        $managedUser = $this->findManageableUser($this->deleteManagedUserId);
+
+        if ($managedUser->is(auth()->user())) {
+            $this->dispatch('shortcut-toast', message: 'Akun yang sedang dipakai tidak bisa dihapus.', type: 'warning');
+
+            return;
+        }
+
+        if ($managedUser->isAdmin() && $this->adminUserCount() <= 1) {
+            $this->dispatch('shortcut-toast', message: 'Admin terakhir tidak bisa dihapus.', type: 'warning');
+
+            return;
+        }
+
+        $managedUser->delete();
+
+        if ($this->editingManagedUserId === $managedUser->id) {
+            $this->resetManagedUserForm();
+        }
+
+        unset($this->manageableUsers);
+
+        $this->cancelManagedUserDelete();
+
+        $this->dispatch('shortcut-toast', message: 'Akun pengelola berhasil dihapus.', type: 'success');
     }
 
     public function saveDashboardSettings(): void
@@ -502,6 +676,29 @@ class ShortcutAdminPanel extends Component
         $this->showResetOrderModal = false;
     }
 
+    public function resetManagedUserForm(): void
+    {
+        $this->reset(['editingManagedUserId', 'managedUserName', 'managedUserEmail', 'managedUserPassword']);
+        $this->managedUserRole = User::ROLE_MANAGER;
+        $this->cancelManagedUserDelete();
+        $this->resetValidation(['managedUserName', 'managedUserEmail', 'managedUserPassword', 'managedUserRole']);
+    }
+
+    protected function manageableUsersQuery(): Builder
+    {
+        return User::query()->whereIn('role', User::adminRoles());
+    }
+
+    protected function findManageableUser(int $managedUserId): User
+    {
+        return $this->manageableUsersQuery()->findOrFail($managedUserId);
+    }
+
+    protected function adminUserCount(): int
+    {
+        return User::query()->where('role', User::ROLE_ADMIN)->count();
+    }
+
     protected function imageIsSquare($file): bool
     {
         [$width, $height] = $this->imageDimensions($file);
@@ -607,6 +804,6 @@ class ShortcutAdminPanel extends Component
     public function render(): View
     {
         return view('livewire.shortcut-admin-panel')
-            ->layout('layouts.app', ['title' => 'Shortcut Admin']);
+            ->layout('layouts.app', ['title' => $this->dashboardTitle.' Admin']);
     }
 }

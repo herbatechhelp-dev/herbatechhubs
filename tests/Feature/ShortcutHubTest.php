@@ -6,6 +6,7 @@ use App\Models\Shortcut;
 use App\Models\User;
 use Database\Seeders\ShortcutSeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -24,7 +25,7 @@ test('public users can view the shortcut hub', function () {
 });
 
 test('admin can update dashboard settings and public hub reflects them', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     Storage::fake('public');
 
@@ -73,7 +74,7 @@ test('admin can update dashboard settings and public hub reflects them', functio
 });
 
 test('admin can remove uploaded dashboard brand assets', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     Storage::fake('public');
 
@@ -104,7 +105,7 @@ test('admin can remove uploaded dashboard brand assets', function () {
 });
 
 test('admin cannot upload a non-square favicon', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     Storage::fake('public');
 
@@ -119,7 +120,7 @@ test('admin cannot upload a non-square favicon', function () {
 });
 
 test('admin cannot upload an overly wide dashboard logo', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     Storage::fake('public');
 
@@ -140,7 +141,7 @@ test('guests are redirected away from the admin panel', function () {
 });
 
 test('authenticated users can view the shortcut admin panel', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     Shortcut::factory()->count(7)->create();
 
@@ -148,13 +149,13 @@ test('authenticated users can view the shortcut admin panel', function () {
 
     $response
         ->assertOk()
-        ->assertSee('Shortcut Admin')
+        ->assertSee('Personal Shortcut Hub Admin')
         ->assertSee('All Categories')
         ->assertSee('Next');
 });
 
 test('admin can reorder shortcuts and dashboard follows saved order', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     $first = Shortcut::factory()->create([
         'title' => 'First Shortcut',
@@ -189,7 +190,7 @@ test('admin can reorder shortcuts and dashboard follows saved order', function (
 });
 
 test('sorting mode allows reordering shortcuts beyond the current paginated page', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     $shortcuts = collect(range(1, 8))->map(function (int $position) {
         return Shortcut::factory()->create([
@@ -217,7 +218,7 @@ test('sorting mode allows reordering shortcuts beyond the current paginated page
 });
 
 test('sort studio can be opened and closed independently from the main list', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     $this->actingAs($user);
 
@@ -233,7 +234,7 @@ test('sort studio can be opened and closed independently from the main list', fu
 });
 
 test('reset seed order requires explicit confirmation first', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     $laravel = Shortcut::factory()->create([
         'title' => 'Laravel Documentation',
@@ -257,7 +258,7 @@ test('reset seed order requires explicit confirmation first', function () {
 });
 
 test('reset seed order restores seeded shortcuts first and keeps custom shortcuts after them', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->manager()->create();
 
     $laravel = Shortcut::factory()->create([
         'title' => 'Laravel Documentation',
@@ -311,4 +312,98 @@ test('reset seed order restores seeded shortcuts first and keeps custom shortcut
         'https://example.com/alpha',
         'https://example.com/beta',
     ]);
+});
+
+test('admin can create a pengelola account from the admin panel', function () {
+    $user = User::factory()->admin()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(ShortcutAdminPanel::class)
+        ->set('managedUserName', 'Pengelola Shortcut')
+        ->set('managedUserEmail', 'pengelola@example.com')
+        ->set('managedUserPassword', 'password123')
+        ->set('managedUserRole', User::ROLE_MANAGER)
+        ->call('saveManagedUser');
+
+    $managedUser = User::query()->where('email', 'pengelola@example.com')->first();
+
+    expect($managedUser)->not->toBeNull();
+    expect($managedUser->role)->toBe(User::ROLE_MANAGER);
+    expect($managedUser->canAccessAdmin())->toBeTrue();
+});
+
+test('admin can update a management account from the admin panel', function () {
+    $user = User::factory()->admin()->create();
+    $managedUser = User::factory()->manager()->create([
+        'name' => 'Pengelola Lama',
+        'email' => 'lama@example.com',
+        'password' => 'password123',
+    ]);
+
+    $this->actingAs($user);
+
+    Livewire::test(ShortcutAdminPanel::class)
+        ->call('editManagedUser', $managedUser->id)
+        ->set('managedUserName', 'Pengelola Baru')
+        ->set('managedUserEmail', 'baru@example.com')
+        ->set('managedUserPassword', 'password456')
+        ->set('managedUserRole', User::ROLE_ADMIN)
+        ->call('saveManagedUser');
+
+    $managedUser->refresh();
+
+    expect($managedUser->name)->toBe('Pengelola Baru');
+    expect($managedUser->email)->toBe('baru@example.com');
+    expect($managedUser->role)->toBe(User::ROLE_ADMIN);
+    expect(Hash::check('password456', $managedUser->password))->toBeTrue();
+});
+
+test('admin can delete a management account from the admin panel', function () {
+    $user = User::factory()->admin()->create();
+    $managedUser = User::factory()->manager()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(ShortcutAdminPanel::class)
+        ->call('confirmManagedUserDelete', $managedUser->id)
+        ->call('deleteManagedUser');
+
+    expect(User::query()->find($managedUser->id))->toBeNull();
+});
+
+test('last admin cannot be downgraded from the admin panel', function () {
+    $user = User::factory()->admin()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(ShortcutAdminPanel::class)
+        ->call('editManagedUser', $user->id)
+        ->set('managedUserRole', User::ROLE_MANAGER)
+        ->call('saveManagedUser')
+        ->assertHasErrors(['managedUserRole']);
+
+    expect($user->fresh()->role)->toBe(User::ROLE_ADMIN);
+});
+
+test('manager cannot create additional management accounts', function () {
+    $user = User::factory()->manager()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(ShortcutAdminPanel::class)
+        ->set('managedUserName', 'Admin Bayangan')
+        ->set('managedUserEmail', 'bayangan@example.com')
+        ->set('managedUserPassword', 'password123')
+        ->set('managedUserRole', User::ROLE_MANAGER)
+        ->call('saveManagedUser')
+        ->assertForbidden();
+});
+
+test('viewers cannot access the admin panel', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('dashboard'));
+
+    $response->assertForbidden();
 });

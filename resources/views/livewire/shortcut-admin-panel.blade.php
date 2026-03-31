@@ -236,6 +236,115 @@
         </form>
     </section>
 
+    @if ($this->canManageUsers)
+        <section class="shortcut-glass-panel rounded-[2rem] p-5 shadow-xl shadow-slate-900/10 sm:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-2xl space-y-3">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-300/70 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700 dark:border-emerald-500/20 dark:text-emerald-300">
+                        <i data-lucide="users-round" class="size-4"></i>
+                        Akun Pengelola
+                    </span>
+                    <h2 class="font-display text-2xl font-semibold text-slate-900 dark:text-white">{{ $editingManagedUserId ? 'Edit akun admin atau pengelola.' : 'Buat akun admin atau pengelola baru.' }}</h2>
+                    <p class="text-sm leading-6 text-slate-600 dark:text-slate-300">Akun pengelola bisa login ke admin panel untuk mengelola shortcut. Pembuatan, perubahan, dan penghapusan akun hanya tersedia untuk admin utama.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+                <form wire:submit="saveManagedUser" class="space-y-4">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="managed-user-name" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Nama</label>
+                            <input id="managed-user-name" type="text" wire:model.blur="managedUserName" class="shortcut-text-input" placeholder="Nama pengelola">
+                            @error('managedUserName') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label for="managed-user-email" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Email</label>
+                            <input id="managed-user-email" type="email" wire:model.blur="managedUserEmail" class="shortcut-text-input" placeholder="pengelola@domain.com">
+                            @error('managedUserEmail') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="managed-user-password" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Password</label>
+                            <input id="managed-user-password" type="password" wire:model.blur="managedUserPassword" class="shortcut-text-input" placeholder="{{ $editingManagedUserId ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter' }}">
+                            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ $editingManagedUserId ? 'Isi hanya jika password perlu diganti.' : 'Gunakan minimal 8 karakter.' }}</p>
+                            @error('managedUserPassword') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label for="managed-user-role" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Role</label>
+                            <select id="managed-user-role" wire:model="managedUserRole" class="shortcut-text-input">
+                                <option value="manager">Pengelola</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            @error('managedUserRole') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-end gap-3 pt-2">
+                        <button type="button" wire:click="resetManagedUserForm" class="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                            <i data-lucide="rotate-ccw" class="size-4"></i>
+                            {{ $editingManagedUserId ? 'Batal Edit' : 'Reset' }}
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-900">
+                            <i data-lucide="{{ $editingManagedUserId ? 'save' : 'user-round-plus' }}" class="size-4"></i>
+                            {{ $editingManagedUserId ? 'Simpan Perubahan' : 'Buat Akun' }}
+                        </button>
+                    </div>
+                </form>
+
+                <aside class="rounded-[1.75rem] border border-slate-300/60 bg-white/70 p-5 dark:border-white/10 dark:bg-white/5">
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Daftar Admin & Pengelola</p>
+                    <div class="mt-4 space-y-3">
+                        @foreach ($this->manageableUsers as $managedUser)
+                            <div class="rounded-2xl border border-slate-300/60 bg-white/80 p-3 dark:border-white/10 dark:bg-white/5">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ $managedUser->name }}@if($managedUser->is(auth()->user())) <span class="text-xs font-medium text-slate-500 dark:text-slate-400">(Anda)</span>@endif</p>
+                                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ $managedUser->email }}</p>
+                                    </div>
+                                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {{ $managedUser->role === 'admin' ? 'bg-sky-500/12 text-sky-700 dark:text-sky-300' : ($managedUser->role === 'manager' ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' : 'bg-slate-500/12 text-slate-700 dark:text-slate-300') }}">
+                                        {{ $managedUser->roleLabel() }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button type="button" wire:click="editManagedUser({{ $managedUser->id }})" class="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                                        <i data-lucide="pencil-line" class="size-3.5"></i>
+                                        Edit
+                                    </button>
+                                    <button type="button" wire:click="confirmManagedUserDelete({{ $managedUser->id }})" class="inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:-translate-y-0.5 dark:border-rose-500/20 dark:text-rose-300">
+                                        <i data-lucide="trash-2" class="size-3.5"></i>
+                                        Hapus
+                                    </button>
+                                </div>
+
+                                @if ($deleteManagedUserId === $managedUser->id)
+                                    <div class="mt-3 rounded-2xl border border-rose-300/70 bg-rose-500/10 p-3 dark:border-rose-500/20">
+                                        <p class="text-sm font-medium text-rose-800 dark:text-rose-200">Hapus {{ $deleteManagedUserName }} dari akun manajemen?</p>
+                                        <p class="mt-1 text-xs text-rose-700/80 dark:text-rose-200/80">Aksi ini menghapus akun login dari panel admin. Admin aktif dan admin terakhir akan tetap dilindungi.</p>
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            <button type="button" wire:click="deleteManagedUser" class="inline-flex items-center gap-2 rounded-full bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition hover:-translate-y-0.5">
+                                                <i data-lucide="trash-2" class="size-3.5"></i>
+                                                Ya, hapus akun
+                                            </button>
+                                            <button type="button" wire:click="cancelManagedUserDelete" class="inline-flex items-center gap-2 rounded-full border border-slate-300/70 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                                                <i data-lucide="x" class="size-3.5"></i>
+                                                Batal
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </aside>
+            </div>
+        </section>
+    @endif
+
     <section class="shortcut-glass-panel rounded-[2rem] p-5 shadow-xl shadow-slate-900/10 sm:p-6">
         <div class="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>

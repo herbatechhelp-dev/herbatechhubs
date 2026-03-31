@@ -21,8 +21,13 @@ class DatabaseSeeder extends Seeder
         ], [
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'role' => User::ROLE_ADMIN,
+            'email_verified_at' => now(),
             'password' => 'password',
-        ]);
+        ])->forceFill([
+            'role' => User::ROLE_ADMIN,
+            'email_verified_at' => now(),
+        ])->save();
 
         HubSetting::query()->updateOrCreate(
             ['id' => 1],

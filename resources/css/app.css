@@ -1,0 +1,110 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Poppins', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field]:not(ui-radio, ui-checkbox) {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+@utility font-display {
+    font-family: var(--font-display);
+}
+
+@layer components {
+    .shortcut-shell {
+        font-family: var(--font-sans);
+    }
+
+    .shortcut-glass-panel {
+        @apply border border-white/40 bg-white/45 backdrop-blur-xl dark:border-white/10 dark:bg-white/5;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
+    }
+
+    .shortcut-card {
+        @apply translate-y-0 scale-100;
+    }
+
+    .shortcut-card:hover {
+        transform: translateY(-8px) scale(1.015);
+    }
+
+    .shortcut-input-shell {
+        @apply border border-white/45 bg-white/65 backdrop-blur-md dark:border-white/10 dark:bg-white/6;
+    }
+
+    .shortcut-text-input {
+        @apply w-full rounded-2xl border border-slate-300/70 bg-white/75 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 dark:border-white/10 dark:bg-white/6 dark:text-slate-100 dark:placeholder:text-slate-400;
+    }
+
+    .shortcut-fade-in {
+        animation: shortcut-fade-in 0.65s ease-out;
+    }
+}
+
+@keyframes shortcut-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

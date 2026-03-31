@@ -1,0 +1,1 @@
+<livewire:shortcut-admin-panel />

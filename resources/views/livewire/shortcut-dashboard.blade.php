@@ -22,12 +22,13 @@
                         </span>
 
                         <div class="space-y-3">
-                            <div>
-                                <h1 class="font-display w-fit text-5xl font-black uppercase tracking-tight leading-none text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white pb-2 sm:text-6xl lg:text-7xl">
+                            <div style="display: table;">
+                                <h1 class="font-display text-5xl font-black uppercase tracking-tight leading-tight text-slate-900 dark:text-white sm:text-6xl lg:text-7xl" style="display: table-caption; caption-side: top;">
                                     {{ $hubSettings->title }}
                                 </h1>
+                                <hr class="border-0 border-t-2 border-slate-900 dark:border-white w-full mt-0">
                                 @if ($hubSettings->subtitle)
-                                    <p class="text-xl font-light tracking-wide text-slate-600 dark:text-slate-200 mt-2 sm:text-2xl">
+                                    <p class="text-xl font-light tracking-wide text-slate-600 dark:text-slate-200 mt-2 sm:text-2xl" style="display: table-caption; caption-side: bottom;">
                                         {{ $hubSettings->subtitle }}
                                     </p>
                                 @endif

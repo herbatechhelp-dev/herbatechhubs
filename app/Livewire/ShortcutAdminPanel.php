@@ -59,6 +59,8 @@ class ShortcutAdminPanel extends Component
 
     public string $dashboardTitle = '';
 
+    public ?string $dashboardSubtitle = '';
+
     public string $dashboardDescription = '';
 
     public string $dashboardFaviconUrl = '';
@@ -131,6 +133,7 @@ class ShortcutAdminPanel extends Component
     {
         return [
             'dashboardTitle' => ['required', 'string', 'max:255'],
+            'dashboardSubtitle' => ['nullable', 'string', 'max:255'],
             'dashboardDescription' => ['required', 'string', 'max:1000'],
             'dashboardFaviconUrl' => ['nullable', 'url', 'max:2048'],
             'dashboardFaviconUpload' => [
@@ -480,6 +483,7 @@ class ShortcutAdminPanel extends Component
 
         $settings->fill([
             'title' => trim($validated['dashboardTitle']),
+            'subtitle' => isset($validated['dashboardSubtitle']) ? trim($validated['dashboardSubtitle']) : null,
             'description' => trim($validated['dashboardDescription']),
             'favicon_url' => $this->dashboardFaviconUpload ? null : (filled($validated['dashboardFaviconUrl']) ? trim($validated['dashboardFaviconUrl']) : null),
             'logo_zoom' => (float) $validated['dashboardLogoZoom'],
@@ -821,6 +825,7 @@ class ShortcutAdminPanel extends Component
         $settings = HubSetting::current();
 
         $this->dashboardTitle = $settings->title;
+        $this->dashboardSubtitle = $settings->subtitle;
         $this->dashboardDescription = $settings->description;
         $this->dashboardFaviconUrl = $settings->favicon_url ?? '';
         $this->dashboardFaviconPreview = $settings->resolvedFaviconUrl();

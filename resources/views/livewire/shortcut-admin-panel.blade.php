@@ -93,10 +93,18 @@
         <form wire:submit="saveDashboardSettings" class="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-start">
             <div class="space-y-4">
                 <div>
-                    <label for="dashboard-title" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Dashboard Title</label>
-                    <input id="dashboard-title" type="text" wire:model.blur="dashboardTitle" class="shortcut-text-input" placeholder="Personal Shortcut Hub">
+                    <label for="dashboard-title" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Dashboard Title (Main)</label>
+                    <input id="dashboard-title" type="text" wire:model.blur="dashboardTitle" class="shortcut-text-input" placeholder="HERBATECH">
                     @error('dashboardTitle') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
                 </div>
+
+                <div>
+                    <label for="dashboard-subtitle" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Dashboard Subtitle (Optional)</label>
+                    <input id="dashboard-subtitle" type="text" wire:model.blur="dashboardSubtitle" class="shortcut-text-input" placeholder="INTEGRATED SYSTEM">
+                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Teks ini akan dirender dengan font yang lebih kecil tepat di bawah judul utama.</p>
+                    @error('dashboardSubtitle') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                </div>
+
 
                 <div>
                     <label for="dashboard-description" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Dashboard Description</label>

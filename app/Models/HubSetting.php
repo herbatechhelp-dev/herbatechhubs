@@ -9,6 +9,7 @@ class HubSetting extends Model
 {
     protected $fillable = [
         'title',
+        'subtitle',
         'description',
         'favicon_url',
         'favicon_path',
@@ -22,6 +23,7 @@ class HubSetting extends Model
     {
         return [
             'title' => 'Personal Shortcut Hub',
+            'subtitle' => 'Integrated System',
             'description' => 'Cari tools, docs, dan website penting secara real-time. Setiap shortcut tampil dengan favicon otomatis, kategori, dan tampilan glassmorphism yang responsif.',
             'favicon_url' => null,
             'favicon_path' => null,

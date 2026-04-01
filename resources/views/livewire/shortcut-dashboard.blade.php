@@ -21,18 +21,19 @@
                             Dashboard Utama
                         </span>
 
-                        <div class="space-y-1 lg:space-y-2">
-                            <div class="flex flex-col items-start">
-                                <h1 class="font-display text-5xl font-black uppercase tracking-tight text-slate-900 sm:text-6xl dark:text-white pb-1 border-b-2 border-slate-900 dark:border-white w-full max-w-max pr-1">
+                        <div class="space-y-0">
+                            <div class="inline-block">
+                                <h1 class="font-display text-[3.25rem] font-black uppercase tracking-tight leading-tight text-slate-900 dark:text-white sm:text-7xl">
                                     {{ $hubSettings->title }}
                                 </h1>
+                                <div class="border-b-[2.5px] border-slate-900 dark:border-white w-full mt-0.5"></div>
                                 @if ($hubSettings->subtitle)
-                                    <p class="text-2xl font-normal text-slate-700 sm:text-3xl dark:text-slate-300 mt-2">
+                                    <p class="text-xl font-normal tracking-normal leading-snug text-slate-700 dark:text-white/80 mt-1.5 sm:text-2xl">
                                         {{ $hubSettings->subtitle }}
                                     </p>
                                 @endif
                             </div>
-                            <p class="max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm dark:text-slate-400 pt-2">
+                            <p class="max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400 pt-4 sm:text-sm">
                                 {{ $hubSettings->description }}
                             </p>
                         </div>

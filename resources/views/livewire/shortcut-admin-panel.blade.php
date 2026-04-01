@@ -395,7 +395,11 @@
 
                             <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/90 dark:bg-white/10">
                                 @if ($shortcut->icon_path)
-                                    <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                    @if ($shortcut->hasCustomIcon())
+                                        <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="h-full w-full rounded-2xl object-cover">
+                                    @else
+                                        <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                    @endif
                                 @else
                                     <i data-lucide="globe" class="size-5 text-slate-500 dark:text-slate-300"></i>
                                 @endif
@@ -477,8 +481,11 @@
                             @error('title') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
                         </div>
                         @if ($iconPreview)
+                            @php
+                                $isPreviewCustom = $iconUpload || ($editingId && \App\Models\Shortcut::find($editingId)?->hasCustomIcon());
+                            @endphp
                             <div class="flex size-14 items-center justify-center rounded-3xl border border-white/10 bg-white/70 dark:bg-white/8">
-                                <img src="{{ $iconPreview }}" alt="Icon preview" class="size-8 rounded-xl object-cover">
+                                <img src="{{ $iconPreview }}" alt="Icon preview" class="{{ $isPreviewCustom ? 'h-full w-full rounded-3xl object-cover' : 'size-8 rounded-xl object-cover' }}">
                             </div>
                         @endif
                     </div>
@@ -496,7 +503,7 @@
                         @error('iconUpload') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
                         @php
                             $currentShortcut = $editingId ? \App\Models\Shortcut::find($editingId) : null;
-                            $hasCustomIconSaved = $currentShortcut && $currentShortcut->icon_path && !str_starts_with($currentShortcut->icon_path, 'http://') && !str_starts_with($currentShortcut->icon_path, 'https://');
+                            $hasCustomIconSaved = $currentShortcut && $currentShortcut->hasCustomIcon();
                         @endphp
                         @if ($iconUpload)
                             <button type="button" wire:click="cancelIconUpload" class="mt-3 inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 transition hover:-translate-y-0.5 dark:border-rose-500/20 dark:text-rose-300">
@@ -661,7 +668,11 @@
 
                                         <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/90 dark:bg-white/10">
                                             @if ($shortcut->icon_path)
-                                                <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                                @if ($shortcut->hasCustomIcon())
+                                                    <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="h-full w-full rounded-2xl object-cover">
+                                                @else
+                                                    <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                                @endif
                                             @else
                                                 <i data-lucide="globe" class="size-5 text-slate-500 dark:text-slate-300"></i>
                                             @endif

@@ -34,4 +34,9 @@ class Shortcut extends Model
 
         return Storage::disk('public')->url($this->icon_path);
     }
+
+    public function hasCustomIcon(): bool
+    {
+        return $this->icon_path && !str_starts_with($this->icon_path, 'http://') && !str_starts_with($this->icon_path, 'https://');
+    }
 }

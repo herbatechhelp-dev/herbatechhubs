@@ -101,7 +101,11 @@
                             <div class="flex min-w-0 items-center gap-4">
                                 <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-white/40 bg-white/75 shadow-lg shadow-slate-900/5 dark:border-white/10 dark:bg-white/10">
                                     @if ($shortcut->icon_path)
-                                        <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} favicon" class="size-8 rounded-lg object-cover">
+                                        @if ($shortcut->hasCustomIcon())
+                                            <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} logo" class="h-full w-full rounded-2xl object-cover">
+                                        @else
+                                            <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} favicon" class="size-8 rounded-lg object-cover">
+                                        @endif
                                     @else
                                         <i data-lucide="globe" class="size-7 text-slate-500 dark:text-slate-300"></i>
                                     @endif

@@ -36,4 +36,5 @@ class DatabaseSeeder extends Seeder
 
         $this->call(ShortcutSeeder::class);
     }
-}
+}php artisan migrate
+php artisan db:seed

@@ -395,7 +395,7 @@
 
                             <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/90 dark:bg-white/10">
                                 @if ($shortcut->icon_path)
-                                    <img src="{{ $shortcut->icon_path }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                    <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
                                 @else
                                     <i data-lucide="globe" class="size-5 text-slate-500 dark:text-slate-300"></i>
                                 @endif
@@ -487,6 +487,28 @@
                         <label for="shortcut-url" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">URL</label>
                         <input id="shortcut-url" type="text" wire:model.live.debounce.500ms="url" class="shortcut-text-input" placeholder="https://example.com">
                         @error('url') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label for="shortcut-icon-upload" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Upload Custom Icon / Logo (Opsional)</label>
+                        <input id="shortcut-icon-upload" type="file" wire:model="iconUpload" accept="image/*" class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:font-semibold file:text-white dark:text-slate-300 dark:file:bg-white dark:file:text-slate-900">
+                        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Gunakan gambar resolusi kotak (1:1). Jika kosong, sistem mencoba otomatis fetch logo website.</p>
+                        @error('iconUpload') <p class="mt-2 text-sm text-rose-500">{{ $message }}</p> @enderror
+                        @php
+                            $currentShortcut = $editingId ? \App\Models\Shortcut::find($editingId) : null;
+                            $hasCustomIconSaved = $currentShortcut && $currentShortcut->icon_path && !str_starts_with($currentShortcut->icon_path, 'http://') && !str_starts_with($currentShortcut->icon_path, 'https://');
+                        @endphp
+                        @if ($iconUpload)
+                            <button type="button" wire:click="cancelIconUpload" class="mt-3 inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 transition hover:-translate-y-0.5 dark:border-rose-500/20 dark:text-rose-300">
+                                <i data-lucide="x" class="size-3.5"></i>
+                                Batal Upload Sementara
+                            </button>
+                        @elseif ($hasCustomIconSaved)
+                            <button type="button" wire:click="removeCustomIcon" class="mt-3 inline-flex items-center gap-2 rounded-full border border-rose-300/70 bg-rose-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 transition hover:-translate-y-0.5 dark:border-rose-500/20 dark:text-rose-300">
+                                <i data-lucide="trash-2" class="size-3.5"></i>
+                                Hapus Custom Icon Permanen
+                            </button>
+                        @endif
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -639,7 +661,7 @@
 
                                         <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/90 dark:bg-white/10">
                                             @if ($shortcut->icon_path)
-                                                <img src="{{ $shortcut->icon_path }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
+                                                <img src="{{ $shortcut->resolvedIconUrl() }}" alt="{{ $shortcut->title }} icon" class="size-7 rounded-lg object-cover">
                                             @else
                                                 <i data-lucide="globe" class="size-5 text-slate-500 dark:text-slate-300"></i>
                                             @endif

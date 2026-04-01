@@ -55,6 +55,8 @@ class ShortcutAdminPanel extends Component
 
     public ?string $iconPreview = null;
 
+    public $iconUpload = null;
+
     public string $dashboardTitle = '';
 
     public string $dashboardDescription = '';
@@ -110,6 +112,18 @@ class ShortcutAdminPanel extends Component
             'description' => ['nullable', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:100'],
             'is_active' => ['boolean'],
+            'iconUpload' => [
+                'nullable',
+                'image',
+                'max:2048',
+                function (string $attribute, $value, \Closure $fail): void {
+                    if (! $value || ! $this->imageIsSquare($value)) {
+                        if ($value) {
+                            $fail('Logo shortcut harus menggunakan rasio persegi (1:1).');
+                        }
+                    }
+                },
+            ],
         ];
     }
 
@@ -177,6 +191,13 @@ class ShortcutAdminPanel extends Component
             : '/favicon.ico';
     }
 
+    public function updatedIconUpload(): void
+    {
+        if ($this->iconUpload) {
+            $this->iconPreview = $this->iconUpload->temporaryUrl();
+        }
+    }
+
     public function updatedDashboardFaviconUpload(): void
     {
         if ($this->dashboardFaviconUpload) {
@@ -200,7 +221,9 @@ class ShortcutAdminPanel extends Component
 
     public function updatedUrl(): void
     {
-        $this->iconPreview = app(FaviconFetcher::class)->preview($this->url);
+        if (! $this->iconUpload) {
+            $this->iconPreview = app(FaviconFetcher::class)->preview($this->url);
+        }
     }
 
     public function updatedSearch(): void
@@ -525,7 +548,8 @@ class ShortcutAdminPanel extends Component
         $this->description = $shortcut->description ?? '';
         $this->category = $shortcut->category;
         $this->is_active = $shortcut->is_active;
-        $this->iconPreview = $shortcut->icon_path;
+        $this->iconPreview = $shortcut->resolvedIconUrl();
+        $this->iconUpload = null;
         $this->showFormModal = true;
 
         $this->dispatch('shortcut-toast', message: 'Shortcut loaded for editing.', type: 'info');
@@ -550,9 +574,29 @@ class ShortcutAdminPanel extends Component
             'url' => $normalizedUrl,
             'description' => $validated['description'] !== '' ? trim($validated['description']) : null,
             'category' => trim($validated['category']),
-            'icon_path' => $faviconFetcher->preview($normalizedUrl) ?? $faviconFetcher->fallbackIcon($normalizedUrl),
             'is_active' => $validated['is_active'],
         ];
+
+        if ($this->iconUpload) {
+            if ($this->editingId) {
+                $existing = Shortcut::query()->find($this->editingId);
+                if ($existing && $existing->icon_path && !str_starts_with($existing->icon_path, 'http://') && !str_starts_with($existing->icon_path, 'https://')) {
+                    Storage::disk('public')->delete($existing->icon_path);
+                }
+            }
+            $payload['icon_path'] = $this->iconUpload->store('shortcut-icons', 'public');
+        } else {
+            if ($this->editingId) {
+                $existing = Shortcut::query()->findOrFail($this->editingId);
+                if ($existing->icon_path && !str_starts_with($existing->icon_path, 'http://') && !str_starts_with($existing->icon_path, 'https://')) {
+                    $payload['icon_path'] = $existing->icon_path;
+                } else {
+                    $payload['icon_path'] = $faviconFetcher->preview($normalizedUrl) ?? $faviconFetcher->fallbackIcon($normalizedUrl);
+                }
+            } else {
+                $payload['icon_path'] = $faviconFetcher->preview($normalizedUrl) ?? $faviconFetcher->fallbackIcon($normalizedUrl);
+            }
+        }
 
         if ($this->editingId) {
             $shortcut = Shortcut::query()->findOrFail($this->editingId);
@@ -564,7 +608,7 @@ class ShortcutAdminPanel extends Component
             ]);
         }
 
-        $this->iconPreview = $shortcut->icon_path;
+        $this->iconPreview = $shortcut->resolvedIconUrl();
         $this->dispatch(
             'shortcut-toast',
             message: $this->editingId ? 'Shortcut updated successfully.' : 'Shortcut created successfully.',
@@ -589,7 +633,13 @@ class ShortcutAdminPanel extends Component
             return;
         }
 
-        Shortcut::findOrFail($this->deleteShortcutId)->delete();
+        $shortcut = Shortcut::findOrFail($this->deleteShortcutId);
+        
+        if ($shortcut->icon_path && !str_starts_with($shortcut->icon_path, 'http://') && !str_starts_with($shortcut->icon_path, 'https://')) {
+            Storage::disk('public')->delete($shortcut->icon_path);
+        }
+
+        $shortcut->delete();
 
         if ($this->editingId === $this->deleteShortcutId) {
             $this->resetForm();
@@ -598,6 +648,36 @@ class ShortcutAdminPanel extends Component
         $this->closeDeleteModal();
 
         $this->dispatch('shortcut-toast', message: 'Shortcut deleted.', type: 'success');
+    }
+
+    public function removeCustomIcon(): void
+    {
+        if ($this->editingId) {
+            $shortcut = Shortcut::findOrFail($this->editingId);
+            if ($shortcut->icon_path && !str_starts_with($shortcut->icon_path, 'http://') && !str_starts_with($shortcut->icon_path, 'https://')) {
+                Storage::disk('public')->delete($shortcut->icon_path);
+                
+                $faviconFetcher = app(FaviconFetcher::class);
+                $shortcut->update([
+                    'icon_path' => $faviconFetcher->preview($shortcut->url) ?? $faviconFetcher->fallbackIcon($shortcut->url)
+                ]);
+                
+                $this->iconPreview = $shortcut->resolvedIconUrl();
+            }
+        }
+        
+        $this->iconUpload = null;
+        $this->dispatch('shortcut-toast', message: 'Uploaded icon removed.', type: 'success');
+    }
+
+    public function cancelIconUpload(): void
+    {
+        $this->iconUpload = null;
+        if ($this->editingId) {
+             $this->iconPreview = Shortcut::findOrFail($this->editingId)->resolvedIconUrl();
+        } else {
+             $this->updatedUrl();
+        }
     }
 
     public function requestResetSeedOrder(): void
@@ -795,7 +875,7 @@ class ShortcutAdminPanel extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'title', 'url', 'description', 'category', 'iconPreview']);
+        $this->reset(['editingId', 'title', 'url', 'description', 'category', 'iconPreview', 'iconUpload']);
         $this->resetErrorBag();
         $this->is_active = true;
         $this->showFormModal = false;
